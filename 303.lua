@@ -13,40 +13,77 @@ lattice=require("lattice")
 s=require("sequins")
 engine.name="ThreeOhThree"
 
-function init()
-  grid_=grid__:new()
-  grid_:toggle_row(1,1,1,16,2)
-  grid_:toggle_row(1,1,1,16,3)
+local PITCH=1
+local PROB=2
+local DECAY=3
+local SUS=4
+local RES=5
+local ENV=6
 
-  song={progression=s{"vi","iii","I","V"},root=36-12,scale='Major',notes={}}
+local ROMAN_CHORDS={"I","ii","iii","VI","V","vi","vii"}
+local pss={
+  {name="chord",mapfn=util.linlin,mapping={1,8},default={1,6,3,5}},
+  {name="prob",mapfn=util.linlin,mapping={0,1},default={1}},
+  {name="decay",mapfn=util.linexp,mapping={0.1,4},default={2}},
+  {name="sus",mapfn=util.linlin,mapping={0.0,1},default={0.5}},
+  {name="res",mapfn=util.linexp,mapping={0.02,0.4},default={0.2}},
+  {name="env",mapfn=util.lilnlin,mapping={250,2000},default={1000}},
+  {name="ctf",mapfn=util.linexp,mapping={25,400},default={100}},
+{name="wave",mapfn=util.linlin,mapping={0,1},default={0]}},
+}
+for i,ps in ipairs(pss) do
+  pss[i].step=16
+  pss[i].step_max=4
+  pss[i].sn=1
+end
+
+-- TODO: table of parameters
+function init()
+  grid_=grid__:new({mems=#pss})
+  for _,ps in ipairs(pss) do
+    for col,val in ipairs(ps.default) do
+      grid_:toggle_single(math.floor(ps.mapfn(ps.mapping[1],ps.mapping[2],8,1,val)),col)
+    end
+  end
+
   -- start lattice
   local sequencer=lattice:new{
     ppqn=96
   }
-  local step=16
   sequencer:new_pattern({
     action=function(t)
-      step=step+1
-      if step>16 then
-        step=1
+      local steps_max={16}
+      for bank=1,8 do
+        table.insert(steps_max,grid_:last_col(bank))
+      end
+      for i,_ in ipairs(steps_max) do
+        steps[i]=steps[i]+1
+        if steps[i]>steps_max[i] then
+          steps[i]=1
+        end
+      end
+      -- chords
+      if steps[1]==1 then
         local prog=song.progression()
         print(prog)
         song.notes=generate_note(song.root,song.scale,prog)
         -- tab.print(song.notes)
         for i=1,3 do
-          engine.tot_pad(0.75,song.notes[i]+24,clock.get_beat_sec()*4)
+          engine.tot_pad(0.0,song.notes[i]+24,clock.get_beat_sec()*4)
         end
       end
-      grid_:set_col(step)
-      local PITCH=1
-      local PROB=2
-      local DECAY=3
-      local prob=util.linlin(0,8,0,1,grid_:get_col(step,PROB))
-      local decay=util.linexp(0,8,0.1,4,grid_:get_col(step,DECAY))
+      grid_:set_col(steps[grid_.bank+1])
+      local prob=util.linlin(0,8,0,1,grid_:get_col(steps[PROB+1],PROB))
+      local decay=util.linexp(0,8,0.1,4,grid_:get_col(steps[DECAY+1],DECAY))
+      local sus=util.linlin(0,8,0,1,grid_:get_col(steps[SUS+1],SUS))
+      local res=util.linexp(0,8,0.05,0.5,grid_:get_col(steps[RES+1],RES))
+      local env=util.linexp(0,8,100,2000,grid_:get_col(steps[ENV+1],ENV))
       if math.random()<prob then
-        local note_index=grid_:get_col(step,PITCH)+1
-        local note=song.notes[note_index]
-        play_note({note=note,dec=decay})
+        local note_index=grid_:get_col(steps[PITCH+1],PITCH)
+        if note_index>0 then
+          local note=song.notes[note_index]
+          play_note({note=note,dec=decay,sus=sus,res=res,env=env})
+        end
       end
       redraw()
     end,
@@ -106,6 +143,9 @@ function enc(k,d)
   if k==1 then
     grid_:delta_bank(d)
   end
+  -- TODO:
+  -- allow encoder to modulate the division
+
 end
 
 function key(k,z)

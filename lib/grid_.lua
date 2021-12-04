@@ -25,7 +25,8 @@ function Grid_:new(args)
       m.visual[i][j]=0
     end
   end
-  for bank=1,8 do
+  m.mems=m.mems or 8
+  for bank=1,m.mems do
     m.mem[bank]={}
     for i=1,8 do
       m.mem[bank][i]={}
@@ -65,7 +66,7 @@ function Grid_:set_bank(b)
 end
 
 function Grid_:delta_bank(d)
-  if self.bank<8 and d>0 then
+  if self.bank<#self.mem and d>0 then
     self.bank=self.bank+1
   elseif self.bank>1 and d<0 then
     self.bank=self.bank-1
@@ -114,12 +115,25 @@ function Grid_:toggle_row(row1,row2,col1,col2,bank)
   end
 end
 
-function Grid_:toggle_single(row,col)
+function Grid_:toggle_single(row,col,bank)
   if self:get(row,col)>0 then
-    self:set(row,col,0)
+    self:set(row,col,0,bank)
   else
-    self:set(row,col,1)
+    self:set(row,col,1,bank)
   end
+end
+
+function Grid_:last_col(bank)
+  bank=bank or self.bank
+  local last_col=1
+  for col=2,16 do
+    for row=1,8 do
+      if self.mem[bank][row][col]>0 then
+        last_col=col
+      end
+    end
+  end
+  return last_col
 end
 
 function Grid_:set(row,col,val,bank)

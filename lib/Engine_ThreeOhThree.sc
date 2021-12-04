@@ -13,6 +13,7 @@ Engine_ThreeOhThree : CroneEngine {
 
 		// <tot>
 
+
 		SynthDef("synthy",{
 			arg out=0,hz=220,amp=0.0,gate=1,sub=0,portamento=1,bend=0,
 			attack=0.5,decay=0.2,sustain=0.9,release=1,
@@ -51,9 +52,14 @@ Engine_ThreeOhThree : CroneEngine {
 			port=0;
 			var  filEnv, volEnv, waves, snd, fil, freq;
 
+			res = Lag.kr(res,0.05);
+			ctf = Lag.kr(ctf,0.05);
+			wave = Lag.kr(wave,0.05);
+			amp = Lag.kr(amp,0.05);
+
 			freq = Lag.kr(note.midicps,port);
 
-			volEnv =  EnvGen .ar( Env .new([10e-10, 1, 1, 10e-10], [0.01, sus, dec],  'exp' ), t_trig).poll;
+			volEnv =  EnvGen .ar( Env .new([10e-10, 1, 1, 10e-10], [0.01, sus, dec],  'exp' ), t_trig);
 			filEnv =  EnvGen .ar( Env .new([10e-10, 1, 10e-10], [0.01, dec],  'exp' ), t_trig);
 
 			snd = SelectX.ar(wave,[ Saw .ar([freq,freq+0.01], volEnv),  Pulse .ar([freq,freq+0.01], 0.5, volEnv)]);
@@ -82,7 +88,7 @@ Engine_ThreeOhThree : CroneEngine {
 				\port,msg[10],
 			);
 		});
-		
+
 		this.addCommand("tot_pad","fff",{ arg msg;
 			Synth.new("synthy",[
 				\amp,msg[1],
