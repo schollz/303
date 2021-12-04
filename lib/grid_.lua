@@ -26,6 +26,7 @@ function Grid_:new(args)
     end
   end
   for bank=1,8 do
+    m.mem[bank]={}
     for i=1,8 do
       m.mem[bank][i]={}
       for j=1,m.grid_width do
@@ -91,23 +92,25 @@ function Grid_:key_press(row,col,on)
 
   if on then
     if #buttons==2 then
-      if buttons[1][1]==buttons[2][1] then
-        self:toggle_row(buttons[1][1],buttons[1][2],buttons[2][2])
-      end
+      self:toggle_row(buttons[1][1],buttons[2][1],buttons[1][2],buttons[2][2])
     elseif #buttons==1 then
-      self:toggle(row,col)
+      self:toggle_single(row,col)
     end
   end
 end
 
-function Grid_:toggle_row(row,col1,col2)
+function Grid_:toggle_row(row1,row2,col1,col2,bank)
   local foo=col1
+  local foo2=row1
   if col1>col2 then
     col1=col2
     col2=foo
+    row1=row2
+    row2=foo2
   end
+  local slope=(row2-row1)/(col2-col1)
   for col=col1,col2 do
-    self:set(row,col,1)
+    self:set(math.floor(row1-((col1-col)*slope)),col,1,bank)
   end
 end
 
@@ -119,12 +122,32 @@ function Grid_:toggle_single(row,col)
   end
 end
 
-function Grid_:set(row,col,val)
-  self.mem[self.bank][row][col]=val
+function Grid_:set(row,col,val,bank)
+  if bank==nil then
+    bank=self.bank
+  end
+  for i=1,8 do
+    self.mem[bank][i][col]=i>=row and 1 or 0
+  end
+
 end
 
-function Grid_:get(row,col)
-  return self.mem[self.bank][row][col]
+function Grid_:get_col(col,bank)
+  -- returns 0-8
+  for row=1,8 do
+    local val=self:get(row,col,bank)
+    if val>0 then
+      do return 9-row end
+    end
+  end
+  return 0
+end
+
+function Grid_:get(row,col,bank)
+  if bank==nil then
+    bank=self.bank
+  end
+  return self.mem[bank][row][col]
 end
 
 function Grid_:get_visual()
@@ -151,7 +174,7 @@ function Grid_:get_visual()
   if self.highlight_column~=nil then
     local col=self.highlight_column
     for row=1,8 do
-      self.visual[row][col]=self.visual[row][col]+5
+      self.visual[row][col]=self.visual[row][col]+2
       if self.visual[row][col]>15 then
         self.visual[row][col]=15
       end

@@ -19,16 +19,16 @@ Engine_ThreeOhThree : CroneEngine {
 		// https://github.com/monome/dust/blob/master/lib/sc/Engine_PolyPerc.sc
 		SynthDef("sc303",{
 			arg  out=0, 
-			gate=0, amp=0.0, freq=440, 
+			t_trig=0, amp=0.0, note=60, 
 			wave=0, ctf=100, res=0.2,
 			sus=0, dec=1.0, env=1000, 
 			port=0;
-			var  filEnv, volEnv, waves, snd, fil;
+			var  filEnv, volEnv, waves, snd, fil, freq;
 
-			freq = Lag.kr(freq,port);
+			freq = Lag.kr(note.midicps,port);
 
-			volEnv =  EnvGen .ar( Env .new([10e-10, 1, 1, 10e-10], [0.01, sus, dec],  'exp' ), gate);
-			filEnv =  EnvGen .ar( Env .new([10e-10, 1, 10e-10], [0.01, dec],  'exp' ), gate);
+			volEnv =  EnvGen .ar( Env .new([10e-10, 1, 1, 10e-10], [0.01, sus, dec],  'exp' ), t_trig).poll;
+			filEnv =  EnvGen .ar( Env .new([10e-10, 1, 10e-10], [0.01, dec],  'exp' ), t_trig);
 
 			snd = SelectX.ar(wave,[ Saw .ar([freq,freq+0.01], volEnv),  Pulse .ar([freq,freq+0.01], 0.5, volEnv)]);
 
@@ -44,9 +44,9 @@ Engine_ThreeOhThree : CroneEngine {
 
 		this.addCommand("tot_play","ffffffffff",{ arg msg;
 			totSynth.set(
-				\gate,msg[1],
+				\t_trig,1,
 				\amp,msg[2],
-				\freq,msg[3],
+				\note,msg[3],
 				\wave,msg[4],
 				\ctf,msg[5],
 				\res,msg[6],
