@@ -33,6 +33,9 @@ function init()
         print(prog)
         song.notes=generate_note(song.root,song.scale,prog)
         -- tab.print(song.notes)
+        for i=1,3 do
+          engine.tot_pad(0.75,song.notes[i]+24,clock.get_beat_sec()*4)
+        end
       end
       grid_:set_col(step)
       local PITCH=1
@@ -67,7 +70,7 @@ function play_note(d)
   d.dec=d.dec or 0.5
   d.env=d.env or 1000
   d.port=d.port or 0
-  engine.tot_play(
+  engine.tot_bass(
     d.gate,
     d.amp,
     d.note,
