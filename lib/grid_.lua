@@ -1,6 +1,5 @@
 local Grid_={}
 
-
 function Grid_:new(args)
   local m=setmetatable({},{__index=Grid_})
   local args=args==nil and {} or args
@@ -18,20 +17,23 @@ function Grid_:new(args)
 
   -- setup visual
   m.visual={}
-  m.lightsout={}
-  m.playing={}
+  m.mem={}
   m.grid_width=16
   for i=1,8 do
-    m.lightsout[i]={}
-    m.playing[i]={}
     m.visual[i]={}
     for j=1,m.grid_width do
       m.visual[i][j]=0
-      m.lightsout[i][j]=0
-      m.playing[i][j]=0
     end
   end
-
+  for bank=1,8 do
+    for i=1,8 do
+      m.mem[bank][i]={}
+      for j=1,m.grid_width do
+        m.mem[bank][i][j]=0
+      end
+    end
+  end
+  m.bank=1
 
   -- keep track of pressed buttons
   m.pressed_buttons={}
@@ -49,6 +51,25 @@ function Grid_:new(args)
   return m
 end
 
+function Grid_:set_col(c)
+  if c~=nil and c>0 then
+    self.highlight_column=c
+  else
+    self.highlight_column=nil
+  end
+end
+
+function Grid_:set_bank(b)
+  self.bank=b
+end
+
+function Grid_:delta_bank(d)
+  if self.bank<8 and d>0 then
+    self.bank=self.bank+1
+  elseif self.bank>1 and d<0 then
+    self.bank=self.bank-1
+  end
+end
 
 function Grid_:grid_key(x,y,z)
   self:key_press(y,x,z==1)
@@ -61,20 +82,49 @@ function Grid_:key_press(row,col,on)
   else
     self.pressed_buttons[row..","..col]=nil
   end
+
+  local buttons={}
+  for k,_ in pairs(self.pressed_buttons) do
+    local row,col=k:match("(%d+),(%d+)")
+    buttons[#buttons+1]={tonumber(row),tonumber(col)}
+  end
+
   if on then
-  	self:toggle_key(row,col)
+    if #buttons==2 then
+      if buttons[1][1]==buttons[2][1] then
+        self:toggle_row(buttons[1][1],buttons[1][2],buttons[2][2])
+      end
+    elseif #buttons==1 then
+      self:toggle(row,col)
+    end
   end
 end
 
+function Grid_:toggle_row(row,col1,col2)
+  local foo=col1
+  if col1>col2 then
+    col1=col2
+    col2=foo
+  end
+  for col=col1,col2 do
+    self:set(row,col,1)
+  end
+end
 
-function Grid_:toggle_key(row,col)
-	for i=row-1,row+1 do
-	  for j=col-1,col+1 do
-	    if i>=1 and i<=8 and j>=1 and j<=self.grid_width then
-	      self.lightsout[i][j]=1-self.lightsout[i][j]
-	    end
-	  end
-	end
+function Grid_:toggle_single(row,col)
+  if self:get(row,col)>0 then
+    self:set(row,col,0)
+  else
+    self:set(row,col,1)
+  end
+end
+
+function Grid_:set(row,col,val)
+  self.mem[self.bank][row][col]=val
+end
+
+function Grid_:get(row,col)
+  return self.mem[self.bank][row][col]
 end
 
 function Grid_:get_visual()
@@ -88,11 +138,22 @@ function Grid_:get_visual()
     end
   end
 
-  -- illuminate lights out
-  for row in ipairs(self.lightsout) do
-    for col in ipairs(self.lightsout[row]) do
-      if self.visual[row][col]<7 then
-        self.visual[row][col]=7*self.lightsout[row][col]
+  -- illuminate current bank
+  for row in ipairs(self.mem[self.bank]) do
+    for col in ipairs(self.mem[self.bank][row]) do
+      if self.mem[self.bank][row][col]>0 then
+        self.visual[row][col]=7
+      end
+    end
+  end
+
+  -- highlight columns
+  if self.highlight_column~=nil then
+    local col=self.highlight_column
+    for row=1,8 do
+      self.visual[row][col]=self.visual[row][col]+5
+      if self.visual[row][col]>15 then
+        self.visual[row][col]=15
       end
     end
   end
@@ -105,7 +166,6 @@ function Grid_:get_visual()
 
   return self.visual
 end
-
 
 function Grid_:grid_redraw()
   self.g:all(0)
