@@ -39,6 +39,7 @@ function Grid_:new(args)
 
   -- keep track of pressed buttons
   m.pressed_buttons={}
+  m.highlight_column={}
 
   -- grid refreshing
   m.grid_refresh=metro.init()
@@ -53,11 +54,11 @@ function Grid_:new(args)
   return m
 end
 
-function Grid_:set_col(c)
+function Grid_:set_col(bank,c)
   if c~=nil and c>0 then
-    self.highlight_column=c
+    self.highlight_column[bank]=c
   else
-    self.highlight_column=nil
+    self.highlight_column[bank]=nil
   end
 end
 
@@ -185,8 +186,8 @@ function Grid_:get_visual()
   end
 
   -- highlight columns
-  if self.highlight_column~=nil then
-    local col=self.highlight_column
+  if self.highlight_column[self.bank]~=nil then
+    local col=self.highlight_column[self.bank]
     for row=1,8 do
       self.visual[row][col]=self.visual[row][col]+2
       if self.visual[row][col]>15 then
