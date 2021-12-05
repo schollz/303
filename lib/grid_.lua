@@ -18,6 +18,7 @@ function Grid_:new(args)
   -- setup visual
   m.visual={}
   m.mem={}
+  m.bank=1
   m.grid_width=16
   for i=1,8 do
     m.visual[i]={}
@@ -25,7 +26,8 @@ function Grid_:new(args)
       m.visual[i][j]=0
     end
   end
-  m.mems=m.mems or 8
+  m.mems=args.mems or 8
+  print("loading mems of ",m.mems)
   for bank=1,m.mems do
     m.mem[bank]={}
     for i=1,8 do
@@ -189,7 +191,7 @@ function Grid_:get_visual()
   if self.highlight_column[self.bank]~=nil then
     local col=self.highlight_column[self.bank]
     for row=1,8 do
-      self.visual[row][col]=self.visual[row][col]+2
+      self.visual[row][col]=self.visual[row][col]+5
       if self.visual[row][col]>15 then
         self.visual[row][col]=15
       end
@@ -208,6 +210,9 @@ end
 function Grid_:grid_redraw()
   self.g:all(0)
   local gd=self:get_visual()
+  if gd==nil then 
+    do return end
+  end
   local s=1
   local e=self.grid_width
   local adj=0
